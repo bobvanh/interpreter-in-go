@@ -8,12 +8,17 @@ type Token struct {
 }
 
 const (
-	LPAREN    = "("
-	RPAREN    = ")"
-	PLUS      = "+"
-	MINUS     = "-"
-	PRODUCT   = "*"
-	DIVIDE    = "/"
-	ADD_ONE   = "++"
-	MINUS_ONE = "--"
+	ILLEGAL = "ILLEGAL"
+	EOF     = "EOF"
+	INT     = "INT" // 1343456
+
+	// Operators
+	LPAREN  = "("
+	RPAREN  = ")"
+	ADD     = "+"
+	SUB     = "-"
+	PRODUCT = "*"
+	DIVIDE  = "/"
+	ADD_ONE = "++"
+	SUB_ONE = "--"
 )

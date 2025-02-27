@@ -1,28 +1,42 @@
 package lexer
 
-import "monkey-do/calc/token"
+import "calc/token"
 
 type Lexer struct {
 	input        string
 	position     int
 	nextPosition int
-	currentChar  byte
+	ch           byte
 }
 
-func (l *Lexer) readChar() {
+func (l *Lexer) nextChar() {
 	if l.nextPosition >= len(l.input) {
-		l.currentChar = 0
+		l.ch = 0
 	} else {
-		l.currentChar = l.input[l.nextPosition]
+		l.ch = l.input[l.nextPosition]
 	}
 	l.position = l.nextPosition
 	l.nextPosition += 1
 }
 
+func (l *Lexer) peekChar() byte {
+	if l.nextPosition >= len(l.input) {
+		return 0
+	} else {
+		return l.input[l.nextPosition]
+	}
+}
+
+func (l *Lexer) skipWhitespace() {
+	for l.ch == ' ' || l.ch == '\t' || l.ch == '\n' || l.ch == '\r' {
+		l.nextChar()
+	}
+}
+
 func New(input string) *Lexer {
-	var l := &Lexer(input: input)
-	l.readChar();
-	return l;
+	l := &Lexer{input: input}
+	l.nextChar()
+	return l
 }
 
 func (l *Lexer) NextToken() token.Token {
@@ -32,39 +46,47 @@ func (l *Lexer) NextToken() token.Token {
 
 	switch l.ch {
 	case '+':
-		if (l.peekChar() == '+') {
+		if l.peekChar() == '+' {
 			ch := l.ch
-			l.readChar()
+			l.nextChar()
 			literal := string(ch) + string(l.ch)
-			tok := New(token.ADD_ONE, literal)
+			tok = *token.New(token.ADD_ONE, literal)
 		} else {
-			tok := New(token.ADD, string(l.ch))
+			tok = newToken(token.ADD, l.ch)
 		}
 	case '-':
-		if (l.peekChar() == '-') {
+		if l.peekChar() == '-' {
 			ch := l.ch
-			l.readChar()
+			l.nextChar()
 			literal := string(ch) + string(l.ch)
-			tok := New(token.SUB_ONE, literal)
+			tok = *token.New(token.SUB_ONE, literal)
 		} else {
-			tok := New(token.SUB, string(l.ch))
+			tok = newToken(token.SUB, l.ch)
 		}
 	case '*':
-		tok := New(token.PRODUCT, string(l.ch))
+		tok = newToken(token.PRODUCT, l.ch)
 	case '/':
-		tok := New(token.DIVIDE, string(l.ch))
+		tok = newToken(token.DIVIDE, l.ch)
 	case '(':
-		tok := New(token.LPAREN, string(l.ch))
+		tok = newToken(token.LPAREN, l.ch)
 	case ')':
-		tok := New(token.RPAREN, string(l.ch))
+		tok = newToken(token.RPAREN, l.ch)
 	default:
 		if isDigit(l.ch) {
-			literal := l.readNumber()
-			tok := New(token.INT, literal)
+			tok.Literal = l.readNumber()
+			tok.Type = token.INT
+			return tok
 		} else {
-			return nil
+			tok = newToken(token.ILLEGAL, l.ch)
 		}
 	}
+
+	l.nextChar()
+	return tok
+}
+
+func newToken(tokenType token.TokenType, ch byte) token.Token {
+	return token.Token{Type: tokenType, Literal: string(ch)}
 }
 
 func isDigit(ch byte) bool {
@@ -74,7 +96,7 @@ func isDigit(ch byte) bool {
 func (l *Lexer) readNumber() string {
 	position := l.position
 	for isDigit(l.ch) {
-		l.readChar()
+		l.nextChar()
 	}
 	return l.input[position:l.position]
 }

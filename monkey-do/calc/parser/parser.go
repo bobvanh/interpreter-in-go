@@ -5,7 +5,24 @@ import (
 	"calc/lexer"
 	"calc/token"
 	"fmt"
+	"strconv"
 )
+
+const (
+	_ int = iota
+	LOWEST
+	SUM
+	PRODUCT
+	PREFIX
+	CALL
+)
+
+var precedences = map[token.TokenType]int{
+	token.ADD:     SUM,
+	token.SUB:     SUM,
+	token.PRODUCT: PRODUCT,
+	token.DIVIDE:  PRODUCT,
+}
 
 type (
 	prefixParseFn func() ast.Expression
@@ -28,6 +45,17 @@ func New(l *lexer.Lexer) *Parser {
 		l:      l,
 		errors: []string{},
 	}
+
+	p.prefixParseFns = make(map[token.TokenType]prefixParseFn)
+	p.registerPrefix(token.INT, p.parseIntegerLiteral)
+	p.registerPrefix(token.ADD_ONE, p.parsePrefixExpression)
+	p.registerPrefix(token.SUB_ONE, p.parsePrefixExpression)
+
+	p.infixParseFns = make(map[token.TokenType]infixParseFn)
+	p.registerInfix(token.ADD, p.parseInfixExpression)
+	p.registerInfix(token.SUB, p.parseInfixExpression)
+	p.registerInfix(token.PRODUCT, p.parseInfixExpression)
+	p.registerInfix(token.DIVIDE, p.parseInfixExpression)
 
 	// read 2 tokens so curToken and peekToken are set
 	//
@@ -72,6 +100,20 @@ func (p *Parser) expectPeek(t token.TokenType) bool {
 	}
 }
 
+func (p *Parser) peekPrecedence() int {
+	if p, ok := precedences[p.peekToken.Type]; ok {
+		return p
+	}
+	return LOWEST
+}
+
+func (p *Parser) curPrecedence() int {
+	if p, ok := precedences[p.currentToken.Type]; ok {
+		return p
+	}
+	return LOWEST
+}
+
 func (p *Parser) peekError(t token.TokenType) {
 	msg := fmt.Sprintf(
 		"expected next token to be %s, got %s instead",
@@ -79,11 +121,16 @@ func (p *Parser) peekError(t token.TokenType) {
 	p.errors = append(p.errors, msg)
 }
 
+func (p *Parser) noPrefixParseError(t token.TokenType) {
+	msg := fmt.Sprintf("no prefix parse function found for %s found", t)
+	p.errors = append(p.errors, msg)
+}
+
 func (p *Parser) ParseProgram() *ast.Program {
 	program := &ast.Program{}
 
 	if p.currentToken.Type != token.EOF {
-		program.Expression = p.parseExpression()
+		program.Expression = p.parseExpression(LOWEST)
 	}
 
 	return program
@@ -93,20 +140,59 @@ func (p *Parser) Errors() []string {
 	return p.errors
 }
 
-func (p *Parser) parseExpression() *ast.ExpressionStatement {
-	if p.currentTokenIs(token.INT) {
-		if p.peekToken.Type == token.EOF {
-			return p.parseIntegerLiteral()
-		} else {
-			return p.parseOperatorExpression()
-		}
-	} else if p.currentTokenIs(token.LPAREN) {
-		return p.parseGroupedExpression()
-	} else {
+func (p *Parser) parseExpression(precedence int) ast.Expression {
+	prefix := p.prefixParseFns[p.currentToken.Type]
+	if prefix == nil {
+		p.noPrefixParseError((p.currentToken.Type))
 		return nil
 	}
+	leftExpression := prefix()
+
+	for !p.peekTokenIs(token.EOF) && precedence < p.peekPrecedence() {
+		infix := p.infixParseFns[p.peekToken.Type]
+		if infix == nil {
+			return leftExpression
+		}
+		p.nextToken()
+		leftExpression = infix(leftExpression)
+	}
+
+	return leftExpression
 }
 
-func (p *Parser) parseIntegerLiteral() *ast.IntegerLiteral {
-	return nil
+func (p *Parser) parsePrefixExpression() ast.Expression {
+	expression := &ast.PrefixExpression{
+		Token:    p.currentToken,
+		Operator: p.currentToken.Literal,
+	}
+	p.nextToken()
+	expression.Right = p.parseExpression(PREFIX)
+	return expression
+}
+
+func (p *Parser) parseInfixExpression(left ast.Expression) ast.Expression {
+	expression := &ast.InfixExpression{
+		Token:    p.currentToken,
+		Operator: p.currentToken.Literal,
+		Left:     left,
+	}
+
+	precedence := p.curPrecedence()
+	p.nextToken()
+	expression.Right = p.parseExpression(precedence)
+	return expression
+}
+
+func (p *Parser) parseIntegerLiteral() ast.Expression {
+	lit := &ast.IntegerLiteral{Token: p.currentToken}
+
+	value, err := strconv.ParseInt(p.currentToken.Literal, 0, 64)
+	if err != nil {
+		msg := fmt.Sprintf("could not parse %q as integer", p.currentToken.Literal)
+		p.errors = append(p.errors, msg)
+		return nil
+	}
+
+	lit.Value = value
+	return lit
 }

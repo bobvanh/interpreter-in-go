@@ -6,7 +6,7 @@ import (
 
 func TestString(t *testing.T) {
 	program := &Program{
-		Expression: nil,
+		Statement: nil,
 	}
 
 	if program.String() != "" {

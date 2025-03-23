@@ -130,7 +130,7 @@ func (p *Parser) ParseProgram() *ast.Program {
 	program := &ast.Program{}
 
 	if p.currentToken.Type != token.EOF {
-		program.Expression = p.parseExpression(LOWEST)
+		program.Statement = p.parseExpressionStatement()
 	}
 
 	return program
@@ -143,7 +143,7 @@ func (p *Parser) Errors() []string {
 func (p *Parser) parseExpression(precedence int) ast.Expression {
 	prefix := p.prefixParseFns[p.currentToken.Type]
 	if prefix == nil {
-		p.noPrefixParseError((p.currentToken.Type))
+		p.noPrefixParseError(p.currentToken.Type)
 		return nil
 	}
 	leftExpression := prefix()
@@ -158,6 +158,18 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 	}
 
 	return leftExpression
+}
+
+func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
+	stmt := &ast.ExpressionStatement{Token: p.currentToken}
+
+	stmt.Expression = p.parseExpression(LOWEST)
+
+	if !p.peekTokenIs(token.EOF) {
+		return nil
+	}
+
+	return stmt
 }
 
 func (p *Parser) parsePrefixExpression() ast.Expression {

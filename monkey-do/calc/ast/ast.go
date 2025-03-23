@@ -23,12 +23,12 @@ type Expression interface {
 // the calc language is for one-liners
 // hence a single statment
 type Program struct {
-	Expression Expression
+	Statement Statement
 }
 
 func (p *Program) TokenLiteral() string {
-	if p.Expression != nil {
-		return p.Expression.TokenLiteral()
+	if p.Statement != nil {
+		return p.Statement.TokenLiteral()
 	} else {
 		return ""
 	}
@@ -36,7 +36,7 @@ func (p *Program) TokenLiteral() string {
 
 func (p *Program) String() string {
 	var out bytes.Buffer
-	out.WriteString(p.Expression.String())
+	out.WriteString(p.Statement.String())
 	return out.String()
 }
 
@@ -45,7 +45,7 @@ type ExpressionStatement struct {
 	Expression Expression
 }
 
-func (es *ExpressionStatement) expressionNode() {}
+func (es *ExpressionStatement) statementNode() {}
 func (es *ExpressionStatement) TokenLiteral() string {
 	return es.Token.Literal
 }

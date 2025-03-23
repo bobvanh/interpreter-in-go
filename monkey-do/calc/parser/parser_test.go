@@ -22,14 +22,14 @@ func TestPrefixExpressions(t *testing.T) {
 		program := p.ParseProgram()
 		checkParserErrors(t, p)
 
-		if program.Expression == nil {
-			t.Fatalf("program.Expression does not contain an Expression")
+		if program.Statement == nil {
+			t.Fatalf("program.Statement does not contain a Statement")
 		}
 
-		stmt, ok := program.Expression.(*ast.ExpressionStatement)
+		stmt, ok := program.Statement.(*ast.ExpressionStatement)
 		if !ok {
-			t.Fatalf("program.Expression is not an ast.ExpressionStatement, got=%T",
-				program.Expression)
+			t.Fatalf("program.Statement is not an ast.ExpressionStatement, got=%T",
+				program.Statement)
 		}
 
 		exp, ok := stmt.Expression.(*ast.PrefixExpression)
@@ -67,19 +67,19 @@ func TestInfixExpressions(t *testing.T) {
 		program := p.ParseProgram()
 		checkParserErrors(t, p)
 
-		if program.Expression == nil {
-			t.Fatalf("program.Expression does not contain an Expression")
+		if program.Statement == nil {
+			t.Fatalf("program.Statement is empty")
 		}
 
-		stmt, ok := program.Expression.(*ast.ExpressionStatement)
+		stmt, ok := program.Statement.(*ast.ExpressionStatement)
 		if !ok {
-			t.Fatalf("program.Expression in not an ast.ExpressionStatement, got %T",
-				program.Expression)
+			t.Fatalf("program.Statement in not an ast.ExpressionStatement, got %T",
+				program.Statement)
 		}
 
 		exp, ok := stmt.Expression.(*ast.InfixExpression)
 		if !ok {
-			t.Fatalf("exp is nog ast.InfixExpression, got=%T",
+			t.Fatalf("exp is nog ast.InfixExpression, got %T",
 				stmt.Expression)
 		}
 
